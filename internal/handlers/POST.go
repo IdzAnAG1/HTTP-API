@@ -26,7 +26,6 @@ func NewTaskHandler(w http.ResponseWriter, r *http.Request) {
 		task.Status = variables.StatusRunning
 		time.Sleep(time.Second * 5)
 		task.Status = variables.StatusDone
-		w.WriteHeader(http.StatusAccepted)
 	}(newTask)
 
 	err := json.NewEncoder(w).Encode(map[string]string{
