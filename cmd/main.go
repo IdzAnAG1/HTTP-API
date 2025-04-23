@@ -1,6 +1,7 @@
 package main
 
 import (
+	"FastAPI/internal/executors"
 	"FastAPI/internal/handlers"
 	"github.com/gorilla/mux"
 	"log"
@@ -8,8 +9,9 @@ import (
 )
 
 func main() {
-	r := mux.NewRouter()
+	executors.Register("sleep", executors.SleepExecutor{})
 
+	r := mux.NewRouter()
 	r.HandleFunc("/task", handlers.NewTaskHandler).Methods("POST")
 	r.HandleFunc("/tasks", handlers.ShowAllTasksHandler).Methods("GET")
 	r.HandleFunc("/task/{id}", handlers.ShowTaskHandler).Methods("GET")

@@ -1,41 +1,48 @@
 package handlers
 
 import (
+	"FastAPI/internal/executors"
 	"FastAPI/internal/structures"
 	"FastAPI/internal/variables"
 	"encoding/json"
 	"github.com/google/uuid"
 	"log"
 	"net/http"
-	"time"
 )
+
+type NewTaskRequest struct {
+	Type string `json:"type"`
+}
 
 func NewTaskHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	var req NewTaskRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Type == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "InvalidRequest"})
+		log.Printf("Invalid Request")
+		return
+	}
+	executor := executors.Get(req.Type)
+	if executor == nil {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "UnknownTaskType"})
+		log.Printf("Unknown Task type ")
+		return
+	}
 	ID := uuid.New().String()
-	newTask := &structures.Task{
+	task := &structures.Task{
 		ID:     ID,
+		Type:   req.Type,
 		Status: variables.StatusCreated,
 	}
-
 	variables.StorageMutex.Lock()
-	variables.Storage[ID] = newTask
+	variables.Storage[ID] = task
 	variables.StorageMutex.Unlock()
-
-	go func(task *structures.Task) {
-		task.Status = variables.StatusRunning
-		time.Sleep(time.Second * 5)
-		task.Status = variables.StatusDone
-	}(newTask)
-
-	err := json.NewEncoder(w).Encode(map[string]string{
-		"task_id": ID,
-		"status":  "Created",
-	})
-	if err != nil {
-		newTask.Error = "JSON encoding error"
-		log.Printf("Error when encoding to JSON Task with task_id : %s", newTask.ID)
-		w.WriteHeader(http.StatusInternalServerError)
-	}
+	go executor.Execute(task)
 	w.WriteHeader(http.StatusAccepted)
+	_ = json.NewEncoder(w).Encode(map[string]string{
+		"task_id": ID,
+		"status":  task.Status,
+	})
 }
