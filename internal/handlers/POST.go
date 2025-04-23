@@ -27,7 +27,7 @@ func NewTaskHandler(w http.ResponseWriter, r *http.Request) {
 	if executor == nil {
 		w.WriteHeader(http.StatusBadRequest)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "UnknownTaskType"})
-		log.Printf("Unknown Task type ")
+		log.Printf("Unknown Task type: %s", req.Type)
 		return
 	}
 	ID := uuid.New().String()
